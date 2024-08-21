@@ -1,0 +1,9 @@
+peewee
+Flask
+requests
+toml
+flask_admin
+numpy
+opencv
+bcrypt
+flask-login

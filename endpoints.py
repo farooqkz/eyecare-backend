@@ -86,6 +86,9 @@ def iris():
     image = request.get_data(as_text=False)
     image_obj = cv2.imdecode(image, cv.IMREAD_GRAYSCALE)
     iris_id = str(uuid4())
+    iris = get_iris(image_obj)
+    if iris is None:
+        abort(400)
     store_iris(
         iris_id,
         get_iris(image_obj)

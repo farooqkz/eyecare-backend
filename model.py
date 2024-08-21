@@ -6,7 +6,7 @@ class BaseModel(pw.Model):
         database = db
 
 class User(BaseModel):
-    username = pw.CharField(unique=True)
+    username = pw.CharField(unique=True, index=True)
     name = pw.TextField()
     lang = pw.CharField()
     color = pw.CharField()
@@ -14,3 +14,8 @@ class User(BaseModel):
     quota = pw.IntegerField()
     password = pw.BlobField()
     age = pw.SmallIntegerField()
+
+class DailyTip(BaseModel):
+    id = pw.IntegerField(unique=True)
+    tip_en = pw.TextField()
+    tip_fa = pw.TextField()

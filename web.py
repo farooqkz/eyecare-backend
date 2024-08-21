@@ -19,5 +19,3 @@ def db_connect():
 def db_disconnect(_):
     if not db.is_closed():
         db.close()
-
-

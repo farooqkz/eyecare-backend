@@ -1,11 +1,23 @@
 from flask import request
 from flask import session
 from flask import abort
-import flask_login
+from flask import g
+import random
+from uuid import uuid4
+from cv import get_iris
 
-from web import app
-from model import User
+from web import app, loginmgr
+from model import User, DailyTip
 from ml import detect_diabetes
+
+def get_daily_tip(lang: "en" | "fa") -> str:
+    if "daily_tip" not in g:
+        g.daily_tip = dict()
+        tips = list(DailyTip.select().dicts())
+        g.daily_tip["en"] = map(lambda tip: tip["tip_en"], tips)
+        g.daily_tip["fa"] = map(lambda tip: tip["tip_fa"], tips)
+    random.choice(g.daily_tip[lang])
+
 
 @app.route("/login", method="POST")
 def login():
@@ -23,7 +35,7 @@ def login():
         return { login_result: "credentials" }
 
     if bcrypt.checkpw(password.encode(), user.password.encode()):
-        flask_login.login_user(user)
+        session["user"] = user
         return {
             "login_result": "success",
             "userPreference": {
@@ -40,3 +52,43 @@ def login():
         return {
             "login_result": "credentials"
         }
+
+@app.route("/logout")
+def logout():
+    session.pop("username", None)
+    return { "login_result": "success" }
+
+
+@app.route("/dailyTip")
+def daily_tip():
+    if session.get("user") is None:
+        lang = "fa"
+    else:
+        lang = session.get("user").lang
+    return get_daily_tip(lang)
+
+@app.route("/diabetes/<iris_id>")
+def diabetes(iris_id: str):
+    if session.get("user") is None:
+        abort(403)
+
+    if detect_diabetes(g.irides[iris_id]):
+        return "yes"
+    else:
+        return "no"
+
+
+@app.route("/iris", method="POST")
+def iris():
+    if session.get("user") is None:
+        abort(403)
+ 
+    image = request.get_data(as_text=False)
+    image_obj = cv2.imdecode(image, cv.IMREAD_GRAYSCALE)
+    iris_id = str(uuid4())
+    store_iris(
+        iris_id,
+        get_iris(image_obj)
+    )
+
+    return iris_id

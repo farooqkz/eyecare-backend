@@ -7,3 +7,4 @@ numpy
 opencv
 bcrypt
 flask-login
+lmdb

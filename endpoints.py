@@ -1,7 +1,7 @@
 from flask import request
 from flask import session
 from flask import abort
-
+import flask_login
 
 from web import app
 from model import User

@@ -6,6 +6,7 @@ from flask import request
 from flask import session
 from flask import abort
 from flask import g
+from flask import make_response
 from bcrypt import checkpw
 import cv2 as cv
 
@@ -27,7 +28,7 @@ def get_daily_tip(lang: str) -> str:
     return choice(g.daily_tip[lang])
 
 
-def get_iris_by_id(iris_id: str) -> Optional[bytes]:
+def get_iris_by_id(iris_id: str) -> Optional[Iris]:
     if g.irides is None:
         return None
     else:
@@ -118,7 +119,21 @@ def iris():
         abort(400)
     store_iris(
         iris_id,
-        get_iris(image_obj)
+        iris
     )
 
     return iris_id
+
+@app.route("/iris/<iris_id>")
+def iris_pic(iris_id: str):
+    if session.get("user") is None:
+        abort(403)
+
+    iris = get_iris_by_id(iris_id)
+    if iris is None:
+        abort(404)
+
+    _, buf = cv.imencode(".jpg", iris[0])
+    resp = make_response(buf)
+    resp.headers["content-type"] = "image/jpeg"
+    return resp

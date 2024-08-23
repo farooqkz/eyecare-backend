@@ -22,23 +22,25 @@ def is_inside_image(circle: Circle, image_shape: tuple[int, int]) -> bool:
         return False
     return True
 
-def get_iris(image: np.ndarray, param1: int) -> Optional[Iris]:
-    min_radius_iris = int(480 * 0.3 * 0.9)
-    max_radius_iris = int(480 * 0.3 * 3.0)
+def get_iris(image: np.ndarray, param1: int = 200, param2: int = 20) -> Optional[Iris]:
+    width, height = image.shape
+    param = min(width, height)
+
+    min_radius_iris = int(param * 0.3 * 0.5)
+    max_radius_iris = int(param * 0.3 * 3.0)
     irides = cv.HoughCircles(
         image,
         cv.HOUGH_GRADIENT,
         1,
         100,
         param1 = param1,
-        param2 = 50,
+        param2 = 1,
         minRadius = min_radius_iris,
         maxRadius = max_radius_iris
     )
-    irides = np.around(irides[0])
-
     if irides is None:
         return None
+    irides = np.around(irides[0])
 
     min_radius_pupil = int(min_radius_iris * 0.2 * 0.5)
     max_radius_pupil = int(min_radius_iris * 0.2 * 4.5)
@@ -46,13 +48,16 @@ def get_iris(image: np.ndarray, param1: int) -> Optional[Iris]:
     pupils = cv.HoughCircles(
         image,
         cv.HOUGH_GRADIENT,
-        1,
+        2,
         100,
         param1 = param1,
-        param2 = 50,
+        param2 = 10,
         minRadius = min_radius_pupil,
         maxRadius = max_radius_pupil
     )
+    if pupils is None:
+        return None
+
     pupils = np.around(pupils[0])
 
     irides = list(filter(
@@ -64,13 +69,14 @@ def get_iris(image: np.ndarray, param1: int) -> Optional[Iris]:
         pupils
     ))
 
-    print(pupils, irides)
+    print(pupils, "\n\n", irides)
 
     selected_iris: Optional[Circle] = None
     selected_pupil: Optional[Circle] = None
     for iris_x, iris_y, iris_r in irides:
         for pupil_x, pupil_y, pupil_r in pupils:
-            if math.sqrt((pupil_x - iris_x)**2 + (pupil_y - iris_y)**2) <= 10:
+            dist = math.sqrt((pupil_x - iris_x)**2 + (pupil_y - iris_y)**2)
+            if dist <= param2:
                 selected_pupil = (pupil_x, pupil_y, pupil_r)
                 selected_iris = (iris_x, iris_y, iris_r)
                 break

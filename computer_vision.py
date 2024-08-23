@@ -1,14 +1,17 @@
-import cv2 as cv
 import math
-from numpy import ndarray
 from typing import Optional
+
+import cv2 as cv
+from numpy import ndarray
+
+from ml import IrisFeatures
 
 Circle = tuple[float, float, float]
 Iris = tuple[ndarray, Circle, Circle]
 
 def get_iris(image: ndarray) -> Optional[Iris]:
-    min_radius = 480 * 0.8 * 0.9
-    max_radius = 480 * 0.8 * 1.1
+    min_radius_iris = int(480 * 0.8 * 0.9)
+    max_radius_iris = int(480 * 0.8 * 1.1)
     irides = cv.HoughCircles(
         image,
         cv.HOUGH_GRADIENT,
@@ -23,8 +26,8 @@ def get_iris(image: ndarray) -> Optional[Iris]:
     if irides is None:
         return None
 
-    min_radius_p = min_radius * 0.6 * 0.9
-    max_radius_p = min_radius * 0.6 * 1.1
+    min_radius_pupil = int(min_radius_iris * 0.6 * 0.8)
+    max_radius_pupil = int(min_radius_iris * 0.6 * 1.2)
 
     pupils = cv.HoughCircles(
         image,
@@ -33,8 +36,8 @@ def get_iris(image: ndarray) -> Optional[Iris]:
         100,
         param1 = 40,
         param2 = 20,
-        minRadius = min_radius_p,
-        maxRadius = max_radius_p
+        minRadius = min_radius_pupil,
+        maxRadius = max_radius_pupil
     )
  
     selected_iris: Optional[Circle] = None
@@ -62,3 +65,6 @@ def get_iris(image: ndarray) -> Optional[Iris]:
     ]
 
     return (image, selected_iris, selected_pupil)
+
+def extract_features_for_ml(iris: Iris) -> IrisFeatures:
+    ...

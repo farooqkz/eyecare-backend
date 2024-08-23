@@ -1,5 +1,6 @@
 import random
-import numpy as np
 
-def detect_diabetes(image: list[float]) -> bool:
+IrisFeatures = list[float]
+
+def detect_diabetes(feats: IrisFeatures) -> bool:
     return random.choice((True, False))

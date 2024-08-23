@@ -6,4 +6,4 @@ flask_admin
 numpy
 opencv
 bcrypt
-flask-login
+pyfeats

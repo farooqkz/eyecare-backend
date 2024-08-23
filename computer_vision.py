@@ -2,48 +2,72 @@ import math
 from typing import Optional
 
 import cv2 as cv
-from numpy import ndarray
+import numpy as np
+import pyfeats
 
 from ml import IrisFeatures
 
 Circle = tuple[float, float, float]
-Iris = tuple[ndarray, Circle, Circle]
+Iris = tuple[np.ndarray, Circle, Circle]
 
-def get_iris(image: ndarray) -> Optional[Iris]:
-    min_radius_iris = int(480 * 0.8 * 0.9)
-    max_radius_iris = int(480 * 0.8 * 1.1)
+
+def is_inside_image(circle: Circle, image_shape: tuple[int, int]) -> bool:
+    if circle[0] - circle[2] < 0:
+        return False
+    if circle[1] - circle[2] < 0:
+        return False
+    if circle[0] + circle[2] > image_shape[0]:
+        return False
+    if circle[1] + circle[2] > image_shape[1]:
+        return False
+    return True
+
+def get_iris(image: np.ndarray, param1: int) -> Optional[Iris]:
+    min_radius_iris = int(480 * 0.3 * 0.9)
+    max_radius_iris = int(480 * 0.3 * 3.0)
     irides = cv.HoughCircles(
         image,
         cv.HOUGH_GRADIENT,
         1,
         100,
-        param1 = 40,
+        param1 = param1,
         param2 = 20,
-        minRadius = min_radius,
-        maxRadius = max_radius
+        minRadius = min_radius_iris,
+        maxRadius = max_radius_iris
     )
+    irides = np.around(irides[0])
 
     if irides is None:
         return None
 
-    min_radius_pupil = int(min_radius_iris * 0.6 * 0.8)
-    max_radius_pupil = int(min_radius_iris * 0.6 * 1.2)
+    min_radius_pupil = int(min_radius_iris * 0.2 * 0.8)
+    max_radius_pupil = int(min_radius_iris * 0.2 * 4.5)
 
     pupils = cv.HoughCircles(
         image,
         cv.HOUGH_GRADIENT,
         1,
         100,
-        param1 = 40,
+        param1 = param1,
         param2 = 20,
         minRadius = min_radius_pupil,
         maxRadius = max_radius_pupil
     )
- 
+    pupils = np.around(pupils[0])
+
+    irides = filter(
+        lambda iris: is_inside_image(iris, (image.shape[0], image.shape[1])),
+        irides
+    )
+    pupils = filter(
+        lambda pupil: is_inside_image(pupil, (image.shape[0], image.shape[1])),
+        pupils
+    )
+
     selected_iris: Optional[Circle] = None
     selected_pupil: Optional[Circle] = None
-    for iris_x, iris_y, iris_r in irides[0]:
-        for pupil_x, pupil_y, pupil_r in pupils[0]:
+    for iris_x, iris_y, iris_r in irides:
+        for pupil_x, pupil_y, pupil_r in pupils:
             if math.sqrt((pupil_x - iris_x)**2 + (pupil_y - iris_y)**2) <= 10:
                 selected_pupil = (pupil_x, pupil_y, pupil_r)
                 selected_iris = (iris_x, iris_y, iris_r)
@@ -55,16 +79,45 @@ def get_iris(image: ndarray) -> Optional[Iris]:
     center_x = selected_iris[0]
     center_y = selected_iris[1]
     length = selected_iris[2]
-    x_upper = max(image.shape[0], center_x + length)
-    y_upper = max(image.shape[1], center_y + length)
-    x_lower = min(0, center_x - length)
-    y_lower = min(0, center_y - length)
+    x_upper = int(min(image.shape[0], center_x + length))
+    y_upper = int(min(image.shape[1], center_y + length))
+    x_lower = int(max(0, center_x - length))
+    y_lower = int(max(0, center_y - length))
     image = image[
         y_lower : y_upper,
         x_lower : x_upper
     ]
 
-    return (image, selected_iris, selected_pupil)
+    return image, selected_iris, selected_pupil
 
-def extract_features_for_ml(iris: Iris) -> IrisFeatures:
-    ...
+
+def extract_features_for_ml(iris_data: Iris) -> tuple[np.ndarray, IrisFeatures]:
+    image, iris, pupil = iris_data
+    iris_x, iris_y, iris_r = iris
+    _pupil_x, _pupil_y, pupil_r = pupil
+    diff_r = int(abs(iris_r - pupil_r))
+    iris_perimeter = 2 * np.pi * iris_r
+    pupil_perimeter = 2 * np.pi * pupil_r
+    average_perimeter = int((iris_perimeter + pupil_perimeter) / 2)
+    unwrapped_image = np.zeros([int(average_perimeter / 12), diff_r])
+    center_x = iris_x
+    center_y = iris_y
+    for y, row in enumerate(image):
+        for x, value in enumerate(row):
+            distance = math.dist((center_x, center_y), (x, y))
+            if distance < pupil_r:
+                continue
+            if x >= center_x:
+                continue
+            if y <= center_y:
+                continue
+            angle = math.atan(abs(y - center_y) / abs(x - center_x))
+            clock = angle * math.pi / 12
+            if clock <= 7:
+                continue
+            if clock >= 8:
+                continue
+            x = int(distance * math.cos(angle))
+            y = int(distance * math.sin(angle))
+            unwrapped_image[x, y] = value
+    return unwrapped_image, list(pyfeats.glcm_features(unwrapped_image)[0])

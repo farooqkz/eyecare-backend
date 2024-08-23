@@ -31,7 +31,7 @@ def get_iris(image: np.ndarray, param1: int) -> Optional[Iris]:
         1,
         100,
         param1 = param1,
-        param2 = 20,
+        param2 = 50,
         minRadius = min_radius_iris,
         maxRadius = max_radius_iris
     )
@@ -40,7 +40,7 @@ def get_iris(image: np.ndarray, param1: int) -> Optional[Iris]:
     if irides is None:
         return None
 
-    min_radius_pupil = int(min_radius_iris * 0.2 * 0.8)
+    min_radius_pupil = int(min_radius_iris * 0.2 * 0.5)
     max_radius_pupil = int(min_radius_iris * 0.2 * 4.5)
 
     pupils = cv.HoughCircles(
@@ -49,20 +49,22 @@ def get_iris(image: np.ndarray, param1: int) -> Optional[Iris]:
         1,
         100,
         param1 = param1,
-        param2 = 20,
+        param2 = 50,
         minRadius = min_radius_pupil,
         maxRadius = max_radius_pupil
     )
     pupils = np.around(pupils[0])
 
-    irides = filter(
+    irides = list(filter(
         lambda iris: is_inside_image(iris, (image.shape[0], image.shape[1])),
         irides
-    )
-    pupils = filter(
+    ))
+    pupils = list(filter(
         lambda pupil: is_inside_image(pupil, (image.shape[0], image.shape[1])),
         pupils
-    )
+    ))
+
+    print(pupils, irides)
 
     selected_iris: Optional[Circle] = None
     selected_pupil: Optional[Circle] = None

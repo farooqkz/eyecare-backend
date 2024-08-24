@@ -1,3 +1,9 @@
+"""
+    Copyright (C) 2024 Eyecare Team
+
+    All rights is reserved
+"""
+
 import math
 from typing import Optional
 

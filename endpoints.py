@@ -1,3 +1,10 @@
+"""
+    Copyright (C) 2024 Eyecare Team
+
+    All rights is reserved
+"""
+
+
 from uuid import uuid4
 from random import choice
 from typing import Optional

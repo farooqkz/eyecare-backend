@@ -22,9 +22,10 @@ def is_inside_image(circle: Circle, image_shape: tuple[int, int]) -> bool:
         return False
     return True
 
-def get_iris(image: np.ndarray, param1: int = 200, param2: int = 20) -> Optional[Iris]:
-    width, height = image.shape
-    param = min(width, height)
+def get_iris(image: np.ndarray, canny: int = 80, close: int = 20) -> Optional[Iris]:
+    image = cv.bilateralFilter(image, 3, 5.0, 3)
+
+    param = min(image.shape)
 
     min_radius_iris = int(param * 0.3 * 0.5)
     max_radius_iris = int(param * 0.3 * 3.0)
@@ -32,9 +33,9 @@ def get_iris(image: np.ndarray, param1: int = 200, param2: int = 20) -> Optional
         image,
         cv.HOUGH_GRADIENT,
         1,
-        100,
-        param1 = param1,
-        param2 = 1,
+        10,
+        param1 = canny,
+        param2 = 18,
         minRadius = min_radius_iris,
         maxRadius = max_radius_iris
     )
@@ -48,10 +49,10 @@ def get_iris(image: np.ndarray, param1: int = 200, param2: int = 20) -> Optional
     pupils = cv.HoughCircles(
         image,
         cv.HOUGH_GRADIENT,
-        2,
-        100,
-        param1 = param1,
-        param2 = 10,
+        1,
+        10,
+        param1 = canny,
+        param2 = 18,
         minRadius = min_radius_pupil,
         maxRadius = max_radius_pupil
     )
@@ -60,26 +61,43 @@ def get_iris(image: np.ndarray, param1: int = 200, param2: int = 20) -> Optional
 
     pupils = np.around(pupils[0])
 
-    irides = list(filter(
+    irides = filter(
         lambda iris: is_inside_image(iris, (image.shape[0], image.shape[1])),
         irides
-    ))
-    pupils = list(filter(
+    )
+    irides = filter(
+        lambda iris: abs(iris[0] - image.shape[0]/2) <= image.shape[0] / 5,
+        irides
+    )
+    irides = filter(
+        lambda iris: abs(iris[1] - image.shape[1]/2) <= image.shape[1] / 5,
+        irides
+    )
+    pupils = filter(
+        lambda pupil: abs(pupil[0] - image.shape[0]/2) <= image.shape[0] / 5,
+        pupils
+    )
+    pupils = filter(
+        lambda pupil: abs(pupil[1] - image.shape[1]/2) <= image.shape[1] / 5,
+        pupils
+    )
+    pupils = filter(
         lambda pupil: is_inside_image(pupil, (image.shape[0], image.shape[1])),
         pupils
-    ))
+    )
 
     print(pupils, "\n\n", irides)
 
     selected_iris: Optional[Circle] = None
     selected_pupil: Optional[Circle] = None
+    selected_dist: float = 10000
     for iris_x, iris_y, iris_r in irides:
         for pupil_x, pupil_y, pupil_r in pupils:
             dist = math.sqrt((pupil_x - iris_x)**2 + (pupil_y - iris_y)**2)
-            if dist <= param2:
+            if dist <= selected_dist:
                 selected_pupil = (pupil_x, pupil_y, pupil_r)
                 selected_iris = (iris_x, iris_y, iris_r)
-                break
+                selected_dist = dist
 
     if selected_iris is None or selected_pupil is None:
         return None

@@ -1,20 +1,25 @@
 import cv2 as cv
+import numpy as np
+import os
 
 from computer_vision import get_iris, extract_features_for_ml
 
-img = cv.imread("/home/farooqkz/Downloads/Diabetes/100/IMG_2016_06_01_9999_21.JPG", cv.IMREAD_GRAYSCALE)
+images: list[np.ndarray] = []
 
-img = cv.resize(img, (640, 333))
+root = "/home/farooqkz/Diabetes/"
 
-c = cv.Canny(img, 40, 80)
+i = 0
 
-cv.imwrite("/tmp/v2.png", c)
-
-iris = get_iris(img, param2=10, param1=80)
-
-if iris is None:
-    print("No iris with pupil inside detected...")
-else:
-    cv.imwrite("/tmp/v1.png", iris[0])
-    print(iris[1:])
-    print("saved")
+for dirname in os.listdir(root):
+    for filename in os.listdir(os.path.join(root, dirname)):
+        if filename.endswith(("JPG", "JPEG", "jpg", "jpeg")):
+            image = cv.imread(os.path.join(root, dirname, filename), cv.IMREAD_GRAYSCALE)
+            width, height = image.shape
+            width = int(width / 2)
+            height = int(height / 2)
+            image = cv.resize(image, (width, height))
+            iris = get_iris(image, canny=75, close=6)
+            if iris is None:
+                continue
+            cv.imwrite(f"/tmp/vo_{i}.jpg", iris[0])
+            i += 1

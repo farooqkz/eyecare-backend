@@ -13,7 +13,7 @@ import cv2 as cv
 from web import app
 from model import User, DailyTip
 from ml import detect_diabetes
-from computer_vision import get_iris, Iris
+from computer_vision import extract_features_for_ml, get_iris, Iris
 
 
 VALID_LANGS = {"fa", "en"}
@@ -75,6 +75,7 @@ def login():
             "login_result": "credentials"
         }
 
+
 @app.route("/logout")
 def logout():
     session.pop("username", None)
@@ -90,6 +91,7 @@ def daily_tip():
         lang = user_obj.lang
     return get_daily_tip(lang)
 
+
 @app.route("/diabetes/<iris_id>")
 def diabetes(iris_id: str):
     if session.get("user") is None:
@@ -99,8 +101,8 @@ def diabetes(iris_id: str):
     if iris is None:
         abort(404)
 
-    feats = 
-    if detect_diabetes(iris):
+    _, feats = extract_features_for_ml(iris)
+    if detect_diabetes(feats):
         return "yes"
     else:
         return "no"

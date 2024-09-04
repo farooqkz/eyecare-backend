@@ -2,24 +2,30 @@ import cv2 as cv
 import numpy as np
 import os
 
-from computer_vision import get_iris, extract_features_for_ml
+from computer_vision import get_pupil, extract_features_for_ml
 
 images: list[np.ndarray] = []
 
-root = "/home/farooqkz/Diabetes/"
+root = "/home/farooqkz/dia/"
 
 i = 0
 
-for dirname in os.listdir(root):
-    for filename in os.listdir(os.path.join(root, dirname)):
-        if filename.endswith(("JPG", "JPEG", "jpg", "jpeg")):
-            image = cv.imread(os.path.join(root, dirname, filename), cv.IMREAD_GRAYSCALE)
-            width, height = image.shape
-            width = int(width / 2)
-            height = int(height / 2)
-            image = cv.resize(image, (width, height))
-            iris = get_iris(image, canny=75, close=6)
-            if iris is None:
-                continue
-            cv.imwrite(f"/tmp/vo_{i}.jpg", iris[0])
-            i += 1
+out = ""
+
+for filename in os.listdir(root):
+    if filename.endswith(("JPG", "JPEG", "jpg", "jpeg")):
+        i += 1
+        print(i)
+        image = cv.imread(os.path.join(root, filename), cv.IMREAD_GRAYSCALE)
+        height, width = image.shape
+        width = int(width / 2)
+        height = int(height / 2)
+        image = cv.resize(image, (width, height))
+        pupil = get_pupil(image, canny=60, close=6)
+        if pupil is None:
+            continue
+        else:
+            _, feats = extract_features_for_ml(image, pupil) 
+            out += ",".join(str(x) for x in feats) + "\n"
+
+print(out)

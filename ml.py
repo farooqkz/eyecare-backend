@@ -1,6 +1,4 @@
 import random
 
-IrisFeatures = list[float]
-
-def detect_diabetes(feats: IrisFeatures) -> bool:
+def detect_diabetes(pic: bytes) -> bool:
     return random.choice((True, False))

@@ -20,7 +20,6 @@ import cv2 as cv
 from web import app
 from model import User, DailyTip
 from ml import detect_diabetes
-from computer_vision import extract_features_for_ml, get_iris, Iris
 
 
 VALID_LANGS = {"fa", "en"}
@@ -33,19 +32,6 @@ def get_daily_tip(lang: str) -> str:
         g.daily_tip["en"] = map(lambda tip: tip["tip_en"], tips)
         g.daily_tip["fa"] = map(lambda tip: tip["tip_fa"], tips)
     return choice(g.daily_tip[lang])
-
-
-def get_iris_by_id(iris_id: str) -> Optional[Iris]:
-    if g.irides is None:
-        return None
-    else:
-        return g.irides.get(iris_id)
-
-
-def store_iris(iris_id: str, iris: Iris):
-    if g.irides is None:
-        g.irides = dict()
-    g.irides[iris_id] = iris
 
 
 @app.route("/login", method="POST")
@@ -99,50 +85,15 @@ def daily_tip():
     return get_daily_tip(lang)
 
 
-@app.route("/diabetes/<iris_id>")
-def diabetes(iris_id: str):
+@app.route("/diabetes", method=("POST", ))
+def diabetes():
     if session.get("user") is None:
         abort(403)
-    
-    iris = get_iris_by_id(iris_id)
-    if iris is None:
+    pic = request.get_data() 
+    if pic is None:
         abort(404)
 
-    _, feats = extract_features_for_ml(iris)
-    if detect_diabetes(feats):
+    if detect_diabetes(pic):
         return "yes"
     else:
         return "no"
-
-
-@app.route("/iris", method="POST")
-def iris():
-    if session.get("user") is None:
-        abort(403)
- 
-    image = request.get_data(as_text=False)
-    image_obj = cv.imdecode(image, cv.IMREAD_GRAYSCALE)
-    iris_id = str(uuid4())
-    iris = get_iris(image_obj)
-    if iris is None:
-        abort(400)
-    store_iris(
-        iris_id,
-        iris
-    )
-
-    return iris_id
-
-@app.route("/iris/<iris_id>")
-def iris_pic(iris_id: str):
-    if session.get("user") is None:
-        abort(403)
-
-    iris = get_iris_by_id(iris_id)
-    if iris is None:
-        abort(404)
-
-    _, buf = cv.imencode(".jpg", iris[0])
-    resp = make_response(buf)
-    resp.headers["content-type"] = "image/jpeg"
-    return resp

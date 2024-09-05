@@ -1,6 +1,5 @@
 import peewee as pw
 from flask import Flask
-from flask_admin import Admin
 from toml import load
 
 app = Flask(__name__)

@@ -29,28 +29,31 @@ def get_daily_tip(lang: str) -> str:
     if "daily_tip" not in g:
         g.daily_tip = dict()
         tips = list(DailyTip.select().dicts())
-        g.daily_tip["en"] = map(lambda tip: tip["tip_en"], tips)
-        g.daily_tip["fa"] = map(lambda tip: tip["tip_fa"], tips)
+        g.daily_tip["en"] = list(map(lambda tip: tip["tip_en"], tips))
+        g.daily_tip["fa"] = list(map(lambda tip: tip["tip_fa"], tips))
     return choice(g.daily_tip[lang])
 
 
-@app.route("/login", method="POST")
+@app.route("/login", methods=("POST", ))
 def login():
+    print("Incoming login request")
     if request.json is None:
+        print("Incoming request is not json")
         abort(404)
     
     username = request.json.get("username")
     password = request.json.get("password")
 
     if username is None or password is None:
+        print("No userpass")
         abort(404)
 
     user = User.get_or_none(User.select().where(User.username == username))
     if user is None:
         return { "login_result": "credentials" }
 
-    if checkpw(password.encode(), user.password.encode()):
-        session["user"] = user
+    if checkpw(password.encode(), user.password):
+        session["user"] = user.username
         return {
             "login_result": "success",
             "userPreference": {
@@ -75,25 +78,40 @@ def logout():
     return { "login_result": "success" }
 
 
-@app.route("/dailyTip")
-def daily_tip():
-    user_obj = session.get("user")
-    if user_obj is None:
+@app.route("/dailyTip/<lang>")
+def daily_tip(lang: str):
+    username = session.get("user")
+    if username is None:
         lang = "fa"
     else:
-        lang = user_obj.lang
+        lang = User.get(User.select().where(User.username == username)).lang
     return get_daily_tip(lang)
 
 
-@app.route("/diabetes", method=("POST", ))
+@app.route("/diabetes", methods=("POST", ))
 def diabetes():
     if session.get("user") is None:
         abort(403)
     pic = request.get_data() 
     if pic is None:
         abort(404)
-
+    User.update(quota = User.quota - 1).where(User.username == session.get("user")).execute()    
     if detect_diabetes(pic):
         return "yes"
     else:
         return "no"
+
+@app.route("/ping")
+def ping():
+    return "pong"
+
+@app.route("/quota")
+def quota():
+    username = session.get("user")
+    if username is None:
+        abort(403)
+    
+    user = User.get(User.select().where(User.username == username))
+    return str(user.quota)
+
+

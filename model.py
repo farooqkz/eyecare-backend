@@ -2,7 +2,7 @@ import peewee as pw
 from web import db
 
 class BaseModel(pw.Model):
-    class Meta
+    class Meta:
         database = db
 
 class User(BaseModel):
@@ -19,3 +19,6 @@ class DailyTip(BaseModel):
     id = pw.IntegerField(unique=True)
     tip_en = pw.TextField()
     tip_fa = pw.TextField()
+
+with db:
+    db.create_tables([DailyTip, User])
